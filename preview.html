@@ -350,9 +350,14 @@
        stack shows panel on top on portrait. Border swaps from border-top
        to border-bottom because the panel now separates itself from the
        module below it, not above.
-       Also: #bd-invite-panel moves from bottom-right to top-right so it
-       stops overlapping the module's right-side stepper column. Explainer
-       text hidden on portrait to keep the panel compact. */
+       #bd-invite-panel repositions to the bottom-right of the side-panel
+       area — sits alongside the status readout ("Module ready.") in the
+       empty space below the Copy Link / Copy / ↓ / ↑ action row. That
+       band lives at the very bottom of side-panel (side-panel is 45vh
+       tall, so its bottom edge is at 55vh from viewport bottom). Keeps
+       the panel's full landscape geometry (208 px wide, explainer text
+       intact) — user wanted "revert the format of the invite panel and
+       buttons to as before". */
     @media (max-aspect-ratio: 1/1) {
       .layout { flex-direction: column-reverse; }
       .side-panel {
@@ -361,14 +366,10 @@
         border-bottom: 1px solid rgba(74, 155, 142, 0.2);
       }
       #bd-invite-panel {
-        top: 8px;
+        top: auto;
+        bottom: calc(55vh + 4px);
         right: 8px;
-        bottom: auto;
-        max-width: 82px;
-        padding: 6px 8px;
       }
-      #bd-invite-text { display: none; }
-      #bd-invite-target { margin-top: 4px; font-size: 11px; }
     }
 
     #script-input {
