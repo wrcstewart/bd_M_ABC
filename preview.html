@@ -62,14 +62,18 @@
       margin-right: 12px;
     }
 
-    /* 2026-07-18 — inline audio player at the right end of #bd-bar.
-       Compact styling; matches the muted greyscale of the surrounding bar. */
+    /* Inline audio player at the right end of #bd-bar. STANDALONE MUSIC:
+       hidden by default (was pre-populated with 3 Chinese-music tracks in
+       Kolam's preview but those files don't exist in this repo, and for the
+       music standalone it doesn't make sense to auto-offer them). Appears
+       when the module bakes an mp3 → BD_MEDIA_BLOB → session track added. */
     #ev-media-bar {
-      display: flex;
+      display: none;
       align-items: center;
       gap: 4px;
       flex: 0 0 auto;
     }
+    #ev-media-bar.active { display: flex; }
     #ev-media-select {
       background: #1a1a2a;
       color: #cccccc;
@@ -548,11 +552,9 @@
          track list (EV has no file-discovery API); preload="none" so the
          60+ MB tracks don't download on page load. -->
     <div id="ev-media-bar">
-      <select id="ev-media-select" title="Choose track">
-        <option value="D_ChineseSad1.mp3" selected>Chinese Sad</option>
-        <option value="A_GreatWall.mp3">Great Wall</option>
-        <option value="A_QiuFengCi.mp3">Qiu Feng Ci</option>
-      </select>
+      <!-- Options injected on the fly by the BD_MEDIA_BLOB handler each time
+           the music module bakes a new mp3. Empty at page load. -->
+      <select id="ev-media-select" title="Choose baked track"></select>
       <button id="ev-media-btn" type="button" aria-label="play/pause">▶</button>
       <audio id="ev-media-audio" preload="none"></audio>
     </div>
@@ -891,43 +893,74 @@ K:Amin
       loadScript(DEFAULT_SCRIPT);
     })();
 
-    // ── Inline audio player (2026-07-18) ──────────────────────────────────
-    // Simple play/pause + track select. Audio source is set lazily on
-    // first play (or on track change with a play already in progress),
-    // so the 60+ MB tracks don't download at page load — preload="none"
-    // on the <audio> element handles the loadstart guard.
-    (function initMediaBar() {
+    // ── Inline audio player (standalone music, 2026-08-05) ───────────────
+    // Empty at load; hidden via CSS. Populated dynamically when the music
+    // module posts BD_MEDIA_BLOB (bake-to-mp3). Each bake registers a
+    // session track (blob URL in-memory), oldest-first eviction at 5. On
+    // registration the media bar becomes visible and the new track is
+    // auto-selected. Track's <option value> is the blob URL; audio.src
+    // assigns it directly.
+    (function initSessionMediaBar() {
+      const bar    = document.getElementById('ev-media-bar');
       const audio  = document.getElementById('ev-media-audio');
       const btn    = document.getElementById('ev-media-btn');
       const select = document.getElementById('ev-media-select');
-      if (!audio || !btn || !select) return;
+      if (!bar || !audio || !btn || !select) return;
 
-      function ensureSrc() {
-        // Only assign src when needed. Comparing to endsWith avoids the
-        // full-URL vs relative-name mismatch (audio.src is absolute).
-        const want = select.value;
-        if (!audio.src || !audio.src.endsWith(want)) audio.src = want;
+      const SESSION_TRACK_CAP = 5;
+      const sessionTracks = [];  // { name, url, sizeBytes }
+
+      function addTrack({ label, audioData, mime, sizeBytes }) {
+        if (!audioData) { console.warn('[session-track] no audioData — bail'); return; }
+        const blob = new Blob([audioData], { type: mime || 'audio/wav' });
+        const url  = URL.createObjectURL(blob);
+        sessionTracks.push({ name: label || 'session', url, sizeBytes: sizeBytes || audioData.byteLength });
+        while (sessionTracks.length > SESSION_TRACK_CAP) {
+          const oldest = sessionTracks.shift();
+          try { URL.revokeObjectURL(oldest.url); } catch (_) {}
+        }
+        renderOptions(url);
+        bar.classList.add('active');
+        // Auto-load the new track so a play click just starts it.
+        audio.pause();
+        audio.src = url;
+        btn.textContent = '▶';
+      }
+
+      function renderOptions(selectedUrl) {
+        select.innerHTML = sessionTracks.map(t => {
+          const sel = t.url === selectedUrl ? ' selected' : '';
+          const mb  = (t.sizeBytes / (1024 * 1024)).toFixed(1);
+          return `<option value="${t.url}"${sel}>${t.name}: ${mb} MB</option>`;
+        }).join('');
       }
 
       btn.addEventListener('click', () => {
+        if (!select.value) return;
         if (audio.paused) {
-          ensureSrc();
+          if (audio.src !== select.value) audio.src = select.value;
           audio.play().then(() => { btn.textContent = '⏸'; })
-                      .catch(err => { console.warn('audio play failed', err); });
+                      .catch(err => console.warn('audio play failed', err));
         } else {
           audio.pause();
           btn.textContent = '▶';
         }
       });
-
       audio.addEventListener('ended', () => { btn.textContent = '▶'; });
-
       select.addEventListener('change', () => {
         const wasPlaying = !audio.paused;
-        if (wasPlaying) audio.pause();
+        audio.pause();
         audio.src = select.value;
         btn.textContent = '▶';
         if (wasPlaying) audio.play().then(() => { btn.textContent = '⏸'; }).catch(() => {});
+      });
+
+      // Listen for the music module's bake output. The module is loaded in
+      // #module-frame, and postToParent posts here — no relay hop needed.
+      window.addEventListener('message', (event) => {
+        const d = event && event.data;
+        if (!d || d.type !== 'BD_MEDIA_BLOB') return;
+        addTrack(d.payload || {});
       });
     })();
 

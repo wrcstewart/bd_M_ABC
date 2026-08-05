@@ -1,9 +1,13 @@
 <!-- ButterflyDreaming Music Module — music_module.html — BD Protocol v0.1 -->
-<!-- Musical counterpart to V_Kolam. Tone.js + abcjs, bass-recorder samples,
-     sliders converted to right-column steppers, LH button column, tiny
-     score render (compact preview / future debug for fractal player).
-     Bake-to-WAV feeds session tracks into BD's #media-bar via BD_MEDIA_BLOB
-     postMessage. -->
+<!-- STANDALONE COPY (bd_M_ABC repo). Divergence from the embedded copy in
+     butterflydreaming_graphviewer1/M_Music/music_module.html — this copy
+     has an extra "Download" button under Create mp3 that saves the most
+     recent bake as a .wav file. Deliberate 2026-08-05 (user request for
+     standalone only). If the two copies need to be resynced later, either
+     port the Download button + lastBakedBlob machinery back into the
+     embedded copy, or drop it here.
+     Musical counterpart to V_Kolam. Tone.js + abcjs, bass-recorder samples,
+     LH button column + right stepper column, tiny title panel. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -277,13 +281,12 @@
 
   <div class="module-layout">
 
-    <!-- LH — sharing/baking buttons. Deep Link retired v15 (duplicated BD's
-         action-bar Copy Link exactly — same URL, same handler); Create mp3
-         moved up into the vacated slot. Remaining space reserved for
-         future fractal-generator controls. -->
+    <!-- LH — sharing/baking buttons. Standalone adds a Download below Create
+         mp3 so a visitor can save the rendered WAV locally. -->
     <aside class="lh-actions">
-      <button id="copy-script-btn"  type="button" title="Copy the current ABC script (with %%bd_ directives) to the clipboard">Copy<br>Script</button>
-      <button id="bake-mp3-btn"     type="button" title="Render offline to WAV and add to the bottom-bar media player">Create<br>mp3</button>
+      <button id="copy-script-btn"    type="button" title="Copy the current ABC script (with %%bd_ directives) to the clipboard">Copy<br>Script</button>
+      <button id="bake-mp3-btn"       type="button" title="Render offline to WAV and add to the bottom-bar media player">Create<br>mp3</button>
+      <button id="download-mp3-btn"   type="button" title="Download the most recent bake as a .wav file" disabled>Download</button>
     </aside>
 
     <!-- Middle — status strip, piece title, Play/Stop row underneath -->
@@ -323,6 +326,7 @@
     const stopBtn        = document.getElementById('stop-btn');
     const copyScriptBtn  = document.getElementById('copy-script-btn');
     const bakeMp3Btn     = document.getElementById('bake-mp3-btn');
+    const downloadBtn    = document.getElementById('download-mp3-btn');
     const pieceTitleEl   = document.getElementById('piece-title');
     const controlPanel   = document.getElementById('control-panel');
 
@@ -338,6 +342,10 @@
     let loopGapSecs   = 6;
     let loopTimer     = null;
     let baking        = false;
+    // Cache the most recent bake so the Download button can hand out a fresh
+    // blob URL each click without re-running the offline render.
+    let lastBakedBlob  = null;
+    let lastBakedLabel = '';
 
     const STEPPERS = [
       { name: 'reverb_wet',        min: 0,  max: 1,  step: 0.05, fallback: 0.35 },
@@ -648,6 +656,7 @@
       playPauseBtn.textContent = (playerState === 'playing') ? 'Pause' : 'Play';
       copyScriptBtn.disabled   = !storedText;
       bakeMp3Btn.disabled      = !ready || baking;
+      downloadBtn.disabled     = !lastBakedBlob;
     }
     playPauseBtn.addEventListener('click', async () => {
       await Tone.start();
@@ -717,6 +726,11 @@
         const mm = String(now.getMinutes()).padStart(2, '0');
         const ss = String(now.getSeconds()).padStart(2, '0');
         const label = `abc @ ${hh}:${mm}:${ss}`;
+        // Cache blob + label so the Download button can hand out a fresh
+        // URL any time. Standalone-only wiring — download stays disabled
+        // until the first successful bake.
+        lastBakedBlob  = new Blob([wavBytes], { type: 'audio/wav' });
+        lastBakedLabel = label;
         console.log('[bd_M_ABC] bake: posting BD_MEDIA_BLOB', {
           label, sizeBytes: wavBytes.byteLength
         });
@@ -738,6 +752,22 @@
         bakeMp3Btn.innerHTML = BAKE_BTN_INITIAL;
         updateControls();
       }
+    });
+
+    // Download — hand out a fresh blob URL each click, trigger a browser
+    // download via a hidden <a download>. Revokes the URL right after so
+    // memory doesn't drift; the underlying Blob keeps the bytes.
+    downloadBtn.addEventListener('click', () => {
+      if (!lastBakedBlob) return;
+      const url = URL.createObjectURL(lastBakedBlob);
+      const safeName = lastBakedLabel.replace(/[^A-Za-z0-9._-]+/g, '_') || 'bake';
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeName}.wav`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
 
     async function renderOfflineToBuffer() {
