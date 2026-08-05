@@ -349,7 +349,10 @@
        column-reverse so DOM order stays module → panel but the visual
        stack shows panel on top on portrait. Border swaps from border-top
        to border-bottom because the panel now separates itself from the
-       module below it, not above. */
+       module below it, not above.
+       Also: #bd-invite-panel moves from bottom-right to top-right so it
+       stops overlapping the module's right-side stepper column. Explainer
+       text hidden on portrait to keep the panel compact. */
     @media (max-aspect-ratio: 1/1) {
       .layout { flex-direction: column-reverse; }
       .side-panel {
@@ -357,6 +360,15 @@
         border-left: none;
         border-bottom: 1px solid rgba(74, 155, 142, 0.2);
       }
+      #bd-invite-panel {
+        top: 8px;
+        right: 8px;
+        bottom: auto;
+        max-width: 82px;
+        padding: 6px 8px;
+      }
+      #bd-invite-text { display: none; }
+      #bd-invite-target { margin-top: 4px; font-size: 11px; }
     }
 
     #script-input {
