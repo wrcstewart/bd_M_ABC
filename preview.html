@@ -342,13 +342,20 @@
       min-height: 0;
     }
 
-    /* Portrait / narrow viewport — stack module above panel. */
+    /* Portrait / narrow viewport — stack panel ABOVE module (user 2026-08-05:
+       "on the ios edit screen you put the script panel and the Copy Link
+       Copy up down arrows below the play etc buttons and the steppers —
+       all the other players have the script above the player"). Use
+       column-reverse so DOM order stays module → panel but the visual
+       stack shows panel on top on portrait. Border swaps from border-top
+       to border-bottom because the panel now separates itself from the
+       module below it, not above. */
     @media (max-aspect-ratio: 1/1) {
-      .layout { flex-direction: column; }
+      .layout { flex-direction: column-reverse; }
       .side-panel {
         flex: 0 0 45vh;
         border-left: none;
-        border-top: 1px solid rgba(74, 155, 142, 0.2);
+        border-bottom: 1px solid rgba(74, 155, 142, 0.2);
       }
     }
 
