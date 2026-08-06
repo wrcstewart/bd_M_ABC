@@ -285,8 +285,9 @@
          mp3 so a visitor can save the rendered WAV locally. -->
     <aside class="lh-actions">
       <button id="copy-script-btn"    type="button" title="Copy the current ABC script (with %%bd_ directives) to the clipboard">Copy<br>Script</button>
-      <button id="bake-mp3-btn"       type="button" title="Render offline to WAV and add to the bottom-bar media player">Create<br>mp3</button>
-      <button id="download-mp3-btn"   type="button" title="Download the most recent bake as a .wav file" disabled>Download</button>
+      <button id="bake-mp3-btn"       type="button" title="Render offline to WAV and add to the bottom-bar media player">Bake</button>
+      <button id="download-mp3-btn"   type="button" title="Save the most recent bake as a .wav file" disabled>Save<br>wav</button>
+      <button id="save-midi-btn"      type="button" title="Save the current ABC score as a .mid file (MIDI, editable in any DAW)">Save<br>midi</button>
     </aside>
 
     <!-- Middle — status strip, piece title, Play/Stop row underneath -->
@@ -327,6 +328,7 @@
     const copyScriptBtn  = document.getElementById('copy-script-btn');
     const bakeMp3Btn     = document.getElementById('bake-mp3-btn');
     const downloadBtn    = document.getElementById('download-mp3-btn');
+    const saveMidiBtn    = document.getElementById('save-midi-btn');
     const pieceTitleEl   = document.getElementById('piece-title');
     const controlPanel   = document.getElementById('control-panel');
 
@@ -657,6 +659,10 @@
       copyScriptBtn.disabled   = !storedText;
       bakeMp3Btn.disabled      = !ready || baking;
       downloadBtn.disabled     = !lastBakedBlob;
+      // Save midi only needs a valid ABC (abcReady also gates parseOnly'd
+      // notes). Doesn't depend on a prior bake — MIDI comes from the score,
+      // not the rendered audio.
+      saveMidiBtn.disabled     = !abcReady;
     }
     playPauseBtn.addEventListener('click', async () => {
       await Tone.start();
@@ -754,20 +760,47 @@
       }
     });
 
-    // Download — hand out a fresh blob URL each click, trigger a browser
-    // download via a hidden <a download>. Revokes the URL right after so
-    // memory doesn't drift; the underlying Blob keeps the bytes.
-    downloadBtn.addEventListener('click', () => {
-      if (!lastBakedBlob) return;
-      const url = URL.createObjectURL(lastBakedBlob);
-      const safeName = lastBakedLabel.replace(/[^A-Za-z0-9._-]+/g, '_') || 'bake';
+    // Small helper — trigger a browser download for a Blob via a hidden
+    // <a download>. Used by both Save wav and Save midi paths.
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${safeName}.wav`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // Save wav — download the most recent bake as .wav. Reuses the cached
+    // Blob so repeat clicks don't re-render.
+    downloadBtn.addEventListener('click', () => {
+      if (!lastBakedBlob) return;
+      const safeName = lastBakedLabel.replace(/[^A-Za-z0-9._-]+/g, '_') || 'bake';
+      downloadBlob(lastBakedBlob, `${safeName}.wav`);
+    });
+
+    // Save midi — abcjs generates the MIDI file directly from the current
+    // ABC score. Doesn't depend on a prior bake (MIDI is derived from the
+    // score, not the rendered audio). ABC is the collaborative source of
+    // truth; MIDI is a lossless derivative that opens in any DAW.
+    saveMidiBtn.addEventListener('click', () => {
+      if (!storedText || typeof ABCJS === 'undefined' || !ABCJS.synth) return;
+      try {
+        const abcText = extractScore(storedText);
+        // midiOutputType 'binary' returns a Uint8Array of the .mid bytes.
+        const bytes = ABCJS.synth.getMidiFile(abcText, { midiOutputType: 'binary' });
+        if (!bytes || !bytes.length) throw new Error('empty MIDI output');
+        const blob = new Blob([bytes], { type: 'audio/midi' });
+        // Filename from the T: title if present, else fall back to a stamp.
+        const title = extractTitle(abcText).replace(/[^A-Za-z0-9._-]+/g, '_') || 'score';
+        downloadBlob(blob, `${title}.mid`);
+        setStatus(`Saved ${title}.mid (${bytes.length} bytes)`);
+      } catch (err) {
+        console.error('[Save midi] failed', err);
+        setStatus('Save midi failed: ' + err.message, true);
+      }
     });
 
     async function renderOfflineToBuffer() {
