@@ -37,10 +37,13 @@
       flex: 1;
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;   /* left ⅔ = cols 1-2, right ⅓ = col 3 */
-      /* 2026-08-18 — player row shrunk to content height (Play/Stop only); the
-         bottom row (ext invite + Bake output) takes the slack (1fr) so there's
-         depth to dock the Collaborate invite into #bd-ext-slot. */
-      grid-template-rows: auto auto 1fr;
+      /* 2026-08-18 — explicit row depths (NOT auto): the copy row (80) and
+         player row (160) are the "doubled" panels; the panels stretch to fill
+         them (align stretch) so their .panel{min-height:0} can't collapse them,
+         and top-aligned content leaves black space below. Bottom row (ext
+         invite + Bake output) takes the slack (1fr). minmax(...,auto) lets a
+         row grow if its content ever exceeds the floor. */
+      grid-template-rows: minmax(80px, auto) minmax(160px, auto) 1fr;
       grid-template-areas:
         "copy   copy    arrows"
         "player player  steppers"
