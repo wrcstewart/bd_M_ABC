@@ -51,7 +51,7 @@
       min-width: 0;
       box-sizing: border-box;
     }
-    .copy-panel     { grid-area: copy; }
+    .copy-panel     { grid-area: copy; min-height: 70px; }   /* 2026-08-18 — doubled depth */
     .player-panel   { grid-area: player; }
     #bd-ext-slot    { grid-area: ext; }
     .output-panel   { grid-area: output; }
@@ -112,7 +112,7 @@
        label, Stop = dark fill / light label. */
     .big-btn {
       min-width: 108px;
-      min-height: 40px;
+      min-height: 80px;                  /* 2026-08-18 — doubled back up (40→80) */
       font-size: 0.95rem;
       font-weight: bold;
     }
