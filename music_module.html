@@ -1,13 +1,13 @@
 <!-- ButterflyDreaming Music Module — music_module.html — BD Protocol v0.1 -->
-<!-- STANDALONE COPY (bd_M_ABC repo). Divergence from the embedded copy in
-     butterflydreaming_graphviewer1/M_Music/music_module.html — this copy
-     has an extra "Download" button under Create mp3 that saves the most
-     recent bake as a .wav file. Deliberate 2026-08-05 (user request for
-     standalone only). If the two copies need to be resynced later, either
-     port the Download button + lastBakedBlob machinery back into the
-     embedded copy, or drop it here.
-     Musical counterpart to V_Kolam. Tone.js + abcjs, bass-recorder samples,
-     LH button column + right stepper column, tiny title panel. -->
+<!-- STANDALONE COPY (bd_M_ABC repo). 2026-08-18 — realigned with the embedded
+     grid layout in butterflydreaming_graphviewer1/M_Music/music_module.html
+     (white-framed panel grid, steppers inside the module, two BD dock-slots).
+     Divergence from the embedded copy: two of the output-panel spare slots
+     hold Save-wav + Save-midi buttons (standalone visitors save locally).
+     If resyncing, port those two buttons + downloadBlob/lastBakedBlob back,
+     or drop them here.
+     Musical counterpart to V_Kolam. Tone.js + abcjs, bass-recorder samples.
+     Bake-to-WAV feeds session tracks into the media bar via BD_MEDIA_BLOB. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,14 +31,90 @@
       flex-direction: column;
     }
 
+    /* 2026-08-18 — panel grid (music_player_layout_spec.md). Same on mobile +
+       desktop; BD sizes the iframe to the panel-width column. */
     .module-layout {
       flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;   /* left ⅔ = cols 1-2, right ⅓ = col 3 */
+      grid-template-rows: auto 1fr auto;
+      grid-template-areas:
+        "copy   copy    arrows"
+        "player player  steppers"
+        "ext    output  steppers";
+      gap: 5px;
+      padding: 5px;
+      min-height: 0;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .copy-panel     { grid-area: copy; }
+    .player-panel   { grid-area: player; }
+    #bd-ext-slot    { grid-area: ext; }
+    .output-panel   { grid-area: output; }
+    #bd-arrows-slot { grid-area: arrows; }
+    #control-panel  { grid-area: steppers; }
+
+    /* white-framed panels (spec §4) */
+    .panel {
+      border: 1px solid #fff;
+      border-radius: 4px;
+      padding: 5px;
       display: flex;
-      flex-direction: row;
-      gap: 0;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-content: flex-start;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .player-panel { flex-direction: column; align-items: center; justify-content: center; }
+    .play-row { display: flex; gap: 8px; }
+
+    /* dock-slots — reserved cells the harness overlays its ↓↑ arrows onto
+       (#bd-arrows-slot) / leaves free (#bd-ext-slot). Standalone: no dashed
+       frame, so an un-docked slot reads as clean free space, not an empty box
+       (spec: "plenty of space in that mode for other ideas later"). */
+    .dock-slot {
+      border: 1px solid transparent;
+      border-radius: 4px;
       min-height: 0;
       min-width: 0;
     }
+
+    /* uniform buttons (spec §4): white frame, black bg, white font, one size */
+    .panel button {
+      border: 1px solid #fff;
+      background: #000;
+      color: #fff;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.66rem;
+      line-height: 1.1;
+      padding: 4px 6px;
+      border-radius: 3px;
+      min-width: 54px;
+      min-height: 26px;
+      cursor: pointer;
+      text-align: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .panel button:hover:not(:disabled)  { background: #1a1a1a; }
+    .panel button:disabled              { opacity: 0.4; cursor: not-allowed; }
+
+    /* Play/Stop exception: 2× size, light-green / light-red, dark label */
+    .big-btn {
+      min-width: 108px;
+      min-height: 52px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #10240f !important;
+    }
+    .big-btn.play { background: #9be29b !important; }
+    .big-btn.stop { background: #e59b9b !important; }
+    .big-btn:hover:not(:disabled) { filter: brightness(1.08); }
 
     /* LH column — 3 action buttons (Copy Script, Deep Link, Create mp3).
        Play/Stop moved out to the middle area 2026-08-05 v3 so BD's invite
@@ -93,53 +169,33 @@
       align-items: center;
     }
 
+    /* 2026-08-18 — status floats out of the grid (top-left); errors/loading
+       only, empty otherwise so it doesn't take layout space. */
     #status {
-      flex: 0 0 auto;
-      align-self: stretch;
-      font-size: 0.78rem;
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      font-size: 0.6rem;
       font-style: italic;
       color: #9e9e90;
-      letter-spacing: 0.03em;
-      text-align: center;
-      background: rgba(15, 15, 24, 0.55);
-      border: 1px solid rgba(74, 155, 142, 0.15);
-      border-radius: 3px;
-      padding: 4px 6px;
-      min-height: 22px;
+      pointer-events: none;
+      max-width: 60%;
     }
-    #status.err {
-      color: #f2a0a0;
-      border-color: rgba(200, 100, 100, 0.4);
-      background: rgba(60, 15, 15, 0.55);
-    }
+    #status:empty { display: none; }
+    #status.err { color: #f2a0a0; }
 
-    /* Piece title — square panel, centred title text inside. 2026-08-05 v4:
-       promoted from a one-line strip to a square area (user request; leaves
-       room for a future waveform / visualisation to live here without
-       relayout). v5: width-only + aspect-ratio derives height so max-width
-       clamping (narrow phones) keeps the square square rather than tall.
-       Height explicitly UNSET so aspect-ratio governs. */
+    /* 2026-08-18 — piece name label (was the square). Sits under Play/Stop in
+       the player panel; just the T: field text, no box. */
     #piece-title {
-      flex: 0 0 auto;
-      width: 220px;
-      height: auto;
-      aspect-ratio: 1 / 1;
-      max-width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(15, 15, 24, 0.55);
-      border: 1px solid rgba(74, 155, 142, 0.15);
-      border-radius: 6px;
-      padding: 12px;
       font-family: 'Georgia', 'Times New Roman', serif;
       font-style: italic;
-      font-size: 1rem;
+      font-size: 0.8rem;
       color: #e8e8e0;
       text-align: center;
+      max-width: 100%;
       overflow: hidden;
       word-wrap: break-word;
-      line-height: 1.3;
+      line-height: 1.2;
     }
 
     /* Play/Stop row — single line, side by side. Widths trimmed ~5% smaller
@@ -169,45 +225,19 @@
     .playback-row button:active:not(:disabled) { background: #243f3b; }
     .playback-row button:disabled              { opacity: 0.4; cursor: not-allowed; }
 
-    /* Right control panel — 8 steppers per media-module convention. */
+    /* 2026-08-18 — stepper column: right-⅓ grid cell, white-framed, scrollable.
+       grid-area:steppers set above; fills the cell height and scrolls. */
     .control-panel {
-      flex: 0 0 200px;
       display: flex;
       flex-direction: column;
       align-items: stretch;
       gap: 3px;
-      background: rgba(15, 15, 24, 0.75);
-      border: 1px solid rgba(74, 155, 142, 0.2);
-      padding: 6px 8px;
-      border-radius: 0.4rem;
+      border: 1px solid #fff;
+      padding: 5px;
+      border-radius: 4px;
       overflow-y: auto;
       min-height: 0;
-      align-self: flex-start;                  /* don't stretch to full column height */
-      max-height: 100%;
-    }
-
-    /* Portrait / narrow — LH row on top, main-area middle, controls band bottom */
-    @media (max-aspect-ratio: 1/1) {
-      .module-layout { flex-direction: column; }
-      .lh-actions {
-        flex: 0 0 auto;
-        flex-direction: row;
-        flex-wrap: wrap;
-        padding: 5px 6px;
-        align-self: stretch;
-      }
-      .lh-actions button { flex: 1 1 auto; min-width: 70px; }
-      .control-panel {
-        flex: 0 0 auto;
-        max-height: 40vh;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-self: stretch;
-      }
-      .control-row { flex: 1 1 30%; min-width: 90px; max-width: 200px; }
-      /* Smaller square on phones so the title doesn't consume the whole
-         middle band. */
-      #piece-title { width: 140px; font-size: 0.9rem; padding: 8px; }
+      min-width: 0;
     }
 
     .control-row {
@@ -240,10 +270,10 @@
       border: 1px solid #4a9b8e;
       color: #4a9b8e;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 0.9rem;
+      font-size: 1.3rem;                       /* 2026-08-18 — +50% with the button */
       padding: 0;
-      width: 26px;
-      height: 22px;
+      width: 39px;                             /* 2026-08-18 — +50% (was 26) for easier taps */
+      height: 33px;                            /* 2026-08-18 — +50% (was 22) */
       line-height: 1;
       cursor: pointer;
       border-radius: 3px;
@@ -279,31 +309,50 @@
 </head>
 <body>
 
+  <!-- 2026-08-18 — panel grid (music_player_layout_spec.md). Left ⅔: copy
+       (top) / player (centre) / [ext-slot | output] (bottom). Right ⅓: BD
+       arrows-slot (top) over the scrollable stepper column. #bd-arrows-slot and
+       #bd-ext-slot are empty dock-slots BD stamps its ↓↑ arrows / Extension
+       panel onto. Same layout desktop + mobile (BD sizes the iframe to the
+       panel-width column). -->
   <div class="module-layout">
 
-    <!-- LH — sharing/baking buttons. Standalone adds a Download below Create
-         mp3 so a visitor can save the rendered WAV locally. -->
-    <aside class="lh-actions">
-      <button id="copy-script-btn"    type="button" title="Copy the current ABC script (with %%bd_ directives) to the clipboard">Copy<br>Script</button>
-      <button id="bake-mp3-btn"       type="button" title="Render offline to WAV and add to the bottom-bar media player">Bake</button>
-      <button id="download-mp3-btn"   type="button" title="Save the most recent bake as a .wav file" disabled>Save<br>wav</button>
-      <button id="save-midi-btn"      type="button" title="Save the current ABC score as a .mid file (MIDI, editable in any DAW)">Save<br>midi</button>
-    </aside>
+    <!-- top-left: Copy panel (expand later if needed, shrinking the Play/Stop panel) -->
+    <div class="panel copy-panel">
+      <button id="copy-script-btn" type="button" title="Copy the current ABC script (with %%bd_ directives) to the clipboard">Copy Script</button>
+      <button id="copy-abc-btn"    type="button" title="Copy the plain .abc score (placeholder)" disabled>Copy .abc</button>
+    </div>
 
-    <!-- Middle — status strip, piece title, Play/Stop row underneath -->
-    <section class="main-area">
-      <div id="status">Loading samples…</div>
-      <div id="piece-title" title="Piece title (T: field of the ABC score)"></div>
-      <div class="playback-row">
-        <button id="play-pause-btn" type="button" disabled>Play</button>
-        <button id="stop-btn"       type="button" disabled>Stop</button>
+    <!-- centre: player main controls -->
+    <div class="panel player-panel">
+      <div class="play-row">
+        <button id="play-pause-btn" class="big-btn play" type="button" disabled>Play</button>
+        <button id="stop-btn"       class="big-btn stop" type="button" disabled>Stop</button>
       </div>
-    </section>
+      <div id="piece-title" title="Piece title (T: field of the ABC score)"></div>
+    </div>
 
-    <!-- Right — 8 steppers -->
+    <!-- bottom-left: BD Extension panel docks here -->
+    <div id="bd-ext-slot" class="dock-slot"></div>
+
+    <!-- bottom (right of the ⅔): Output panel -->
+    <div class="panel output-panel">
+      <button id="bake-mp3-btn" type="button" title="Render offline to WAV and add to the bottom-bar media player">Bake</button>
+      <button id="download-mp3-btn" type="button" title="Save the most recent bake as a .wav file" disabled>Save wav</button>
+      <button id="save-midi-btn" type="button" title="Save the current ABC score as a .mid file (MIDI, editable in any DAW)">Save midi</button>
+      <button class="ph" type="button" disabled title="(spare)">&nbsp;</button>
+    </div>
+
+    <!-- right ⅓ top: BD ↓↑ arrows dock here -->
+    <div id="bd-arrows-slot" class="dock-slot"></div>
+
+    <!-- right ⅓: scrollable stepper column -->
     <aside id="control-panel" class="control-panel"><!-- injected --></aside>
 
   </div>
+
+  <!-- errors / loading only; floats out of the grid (top-left) -->
+  <div id="status"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.2.2/abcjs-basic-min.js"></script>
@@ -327,8 +376,8 @@
     const stopBtn        = document.getElementById('stop-btn');
     const copyScriptBtn  = document.getElementById('copy-script-btn');
     const bakeMp3Btn     = document.getElementById('bake-mp3-btn');
-    const downloadBtn    = document.getElementById('download-mp3-btn');
-    const saveMidiBtn    = document.getElementById('save-midi-btn');
+    const downloadBtn    = document.getElementById('download-mp3-btn');   // standalone: Save wav
+    const saveMidiBtn    = document.getElementById('save-midi-btn');      // standalone: Save midi
     const pieceTitleEl   = document.getElementById('piece-title');
     const controlPanel   = document.getElementById('control-panel');
 
@@ -340,14 +389,12 @@
     let noteEvents    = [];
     let endTimeSecs   = 0;
     let storedText    = '';
+    let lastBakedBlob  = null;   // standalone: most recent bake, for Save wav
+    let lastBakedLabel = '';     // standalone: label of that bake (→ filename)
     let loopEnabled   = true;
     let loopGapSecs   = 6;
     let loopTimer     = null;
     let baking        = false;
-    // Cache the most recent bake so the Download button can hand out a fresh
-    // blob URL each click without re-running the offline render.
-    let lastBakedBlob  = null;
-    let lastBakedLabel = '';
 
     const STEPPERS = [
       { name: 'reverb_wet',        min: 0,  max: 1,  step: 0.05, fallback: 0.35 },
@@ -375,11 +422,19 @@
     });
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-    const setStatus = (msg, isErr = false) => {
-      statusEl.textContent = msg;
-      statusEl.classList.toggle('err', !!isErr);
-    };
     const postToParent = (msg) => window.parent.postMessage(msg, '*');
+    const setStatus = (msg, isErr = false) => {
+      // 2026-08-18 — the in-module corner text was unreadable (behind the
+      // Copy Script panel). All status now relays UP to BD's general status
+      // pane (bottom-left "N connected" strip, horizontally scrollable),
+      // where the connection count shows first and this message follows.
+      // The local #status is kept empty (:empty → display:none).
+      statusEl.textContent = '';
+      // Only REAL errors reach BD's status pane; non-error chatter
+      // (Playing / Stopped / Baking…) sends empty text, which clears the
+      // extra slot and leaves just the connection count.
+      postToParent({ type: 'BD_STATUS', text: isErr ? (msg || '') : '', isErr: !!isErr });
+    };
 
     function formatDisplay(spec, val) {
       if (spec.isToggle) return val >= 0.5 ? 'on' : 'off';
@@ -464,7 +519,7 @@
 
     Promise.all([Tone.loaded(), reverb.ready]).then(() => {
       samplerReady = true;
-      setStatus(abcReady ? 'Ready — press Play' : 'Ready');
+      setStatus('');   // 2026-08-17 — no "Ready — press Play" clutter; errors still shown
       updateControls();
     });
 
@@ -658,11 +713,8 @@
       playPauseBtn.textContent = (playerState === 'playing') ? 'Pause' : 'Play';
       copyScriptBtn.disabled   = !storedText;
       bakeMp3Btn.disabled      = !ready || baking;
-      downloadBtn.disabled     = !lastBakedBlob;
-      // Save midi only needs a valid ABC (abcReady also gates parseOnly'd
-      // notes). Doesn't depend on a prior bake — MIDI comes from the score,
-      // not the rendered audio.
-      saveMidiBtn.disabled     = !abcReady;
+      downloadBtn.disabled     = !lastBakedBlob;                  // standalone: Save wav
+      saveMidiBtn.disabled     = !storedText;                     // standalone: Save midi (from score)
     }
     playPauseBtn.addEventListener('click', async () => {
       await Tone.start();
@@ -732,9 +784,8 @@
         const mm = String(now.getMinutes()).padStart(2, '0');
         const ss = String(now.getSeconds()).padStart(2, '0');
         const label = `abc @ ${hh}:${mm}:${ss}`;
-        // Cache blob + label so the Download button can hand out a fresh
-        // URL any time. Standalone-only wiring — download stays disabled
-        // until the first successful bake.
+        // Standalone: cache blob + label so Save wav can hand out a fresh
+        // URL any time without re-rendering.
         lastBakedBlob  = new Blob([wavBytes], { type: 'audio/wav' });
         lastBakedLabel = label;
         console.log('[bd_M_ABC] bake: posting BD_MEDIA_BLOB', {
@@ -760,6 +811,7 @@
       }
     });
 
+    // ── Standalone-only: Save wav / Save midi (local downloads) ────────────
     // Small helper — trigger a browser download for a Blob via a hidden
     // <a download>. Used by both Save wav and Save midi paths.
     function downloadBlob(blob, filename) {
@@ -773,29 +825,22 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    // Save wav — download the most recent bake as .wav. Reuses the cached
-    // Blob so repeat clicks don't re-render.
+    // Save wav — download the most recent bake. Reuses the cached Blob so
+    // repeat clicks don't re-render.
     downloadBtn.addEventListener('click', () => {
       if (!lastBakedBlob) return;
       const safeName = lastBakedLabel.replace(/[^A-Za-z0-9._-]+/g, '_') || 'bake';
       downloadBlob(lastBakedBlob, `${safeName}.wav`);
     });
 
-    // Save midi — abcjs generates the MIDI file directly from the current
-    // ABC score. Doesn't depend on a prior bake (MIDI is derived from the
-    // score, not the rendered audio). ABC is the collaborative source of
-    // truth; MIDI is a lossless derivative that opens in any DAW.
-    // v-fix (2026-08-06): getMidiFile with a raw ABC string routes through
-    // renderEngine, which returns an ARRAY (one Uint8Array per tune) not a
-    // single Uint8Array. Wrapping the array in a Blob was serialising it
-    // via toString and producing a ~720 byte text file that Logic accepted
-    // as .mid but couldn't parse. Take bytes[0].
+    // Save midi — abcjs generates the MIDI directly from the current score
+    // (independent of any prior bake; ABC is the source of truth). getMidiFile
+    // with 'binary' routes through renderEngine, which returns an ARRAY (one
+    // Uint8Array per tune) — take [0] (our ABC has a single tune).
     saveMidiBtn.addEventListener('click', () => {
       if (!storedText || typeof ABCJS === 'undefined' || !ABCJS.synth) return;
       try {
         const abcText = extractScore(storedText);
-        // midiOutputType 'binary' → renderEngine wraps in an array (one
-        // entry per tune). Our ABC only has one tune, so take [0].
         const result = ABCJS.synth.getMidiFile(abcText, { midiOutputType: 'binary' });
         const bytes  = Array.isArray(result) ? result[0] : result;
         if (!bytes || !bytes.byteLength) throw new Error('empty MIDI output');

@@ -423,6 +423,39 @@
       padding: 6px 12px;
       flex: 0 0 44px;
     }
+
+    /* 2026-08-18 — docked ↓↑ arrows. Overlaid onto the module's #bd-arrows-slot
+       by positionSlots(); shown in edit mode only. Fallback position (top-right)
+       applies if the slot can't be read. White-frame/black-bg to match the
+       module's grid buttons. */
+    #arrow-dock {
+      position: fixed;
+      top: 52px;
+      right: 8px;
+      display: none;                     /* shown in edit mode (rule below) */
+      flex-direction: row;
+      gap: 4px;
+      z-index: 1001;
+    }
+    body:not(.ev-basic) #arrow-dock { display: flex; }
+    #arrow-dock button {
+      flex: 1 1 0;
+      min-width: 40px;
+      background: #000;
+      border: 1px solid #fff;
+      color: #fff;
+      font-size: 1.1rem;
+      line-height: 1;
+      border-radius: 3px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #arrow-dock button:hover    { background: #1a1a1a; }
+    #arrow-dock button:active   { background: #243f3b; }
+    #arrow-dock button:disabled { opacity: 0.4; cursor: not-allowed; }
     .action-bar button:hover  { background: #1a2a28; }
     .action-bar button:active { background: #243f3b; }
     .action-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -553,12 +586,19 @@
       <div class="action-bar">
         <button id="copy-link-btn" title="Copy a shareable URL that reproduces this script">Copy Link</button>
         <button id="copy-btn"      title="Copy the script to the clipboard">Copy</button>
-        <button id="send-btn"      class="arrow" title="Send script → module">↓</button>
-        <button id="receive-btn"   class="arrow" title="Request module state → script">↑</button>
       </div>
       <div id="stepper-column" class="stepper-column"><!-- steppers injected --></div>
       <div id="status">Loading module…</div>
     </aside>
+  </div>
+
+  <!-- 2026-08-18 — ↓↑ script-exchange arrows, lifted out of the side-panel so
+       positionSlots() can overlay them onto the module's #bd-arrows-slot grid
+       cell (mirrors BD's dock mechanism). Edit-mode only; falls back to the
+       top-right corner if the slot can't be read. -->
+  <div id="arrow-dock">
+    <button id="send-btn"    class="arrow" title="Send script → module">↓</button>
+    <button id="receive-btn" class="arrow" title="Request module state → script">↑</button>
   </div>
 
   <div id="bd-bar">
@@ -1048,8 +1088,49 @@ K:Amin
       evEditBtn.addEventListener('click', () => {
         const nowEditing = document.body.classList.toggle('ev-basic') === false;
         evEditBtn.classList.toggle('active', nowEditing);
+        // Grid reflows between full-width (basic) and side-panel-inset (edit),
+        // so the slot moves — re-dock. rAF lets layout settle first.
+        requestAnimationFrame(positionSlots);
       });
     }
+
+    // ── Dock the ↓↑ arrows onto the module's grid slot ─────────────────────
+    // The music module reserves an empty #bd-arrows-slot cell (top-right of its
+    // grid). We overlay #arrow-dock onto it — same-origin single iframe, so we
+    // read the slot rect directly and add the iframe's page offset. If the slot
+    // can't be read (module still loading, or an older build), the arrows fall
+    // back to their CSS top-right position — nothing breaks. Edit-mode only.
+    const arrowDock = document.getElementById('arrow-dock');
+    function positionSlots() {
+      // Only meaningful while editing (arrow-dock is display:none otherwise).
+      if (document.body.classList.contains('ev-basic')) return;
+      let docked = false;
+      try {
+        const doc  = moduleFrame.contentDocument;
+        const slot = doc && doc.getElementById('bd-arrows-slot');
+        if (slot) {
+          const fr = moduleFrame.getBoundingClientRect();
+          const sr = slot.getBoundingClientRect();
+          if (sr.width >= 8 && sr.height >= 8) {
+            arrowDock.style.top    = (fr.top  + sr.top)  + 'px';
+            arrowDock.style.left   = (fr.left + sr.left) + 'px';
+            arrowDock.style.right  = 'auto';
+            arrowDock.style.width  = sr.width  + 'px';
+            arrowDock.style.height = sr.height + 'px';
+            docked = true;
+          }
+        }
+      } catch (e) { /* cross-doc access can throw pre-load — fall back */ }
+      if (!docked) {
+        // Fallback: clear inline geometry so the CSS top:52px right:8px applies.
+        arrowDock.style.top = '';
+        arrowDock.style.left = '';
+        arrowDock.style.right = '';
+        arrowDock.style.width = '';
+        arrowDock.style.height = '';
+      }
+    }
+    window.addEventListener('resize', positionSlots);
 
     // goToVirtual + navigateSibling retired 2026-07-17. See comment above
     // the button-const block for context.
@@ -1343,6 +1424,10 @@ K:Amin
         case 'BD_READY': {
           moduleReady = true;
           setStatus('Module ready.');
+          // Grid is laid out now — dock the arrows. A couple of rAF ticks let
+          // fonts/steppers settle so the slot rect is final.
+          requestAnimationFrame(positionSlots);
+          requestAnimationFrame(() => requestAnimationFrame(positionSlots));
           // NOTE (music): bd_ui_config { hideControls: true } NOT sent here.
           // The music module owns its own controls (LH action buttons + right
           // stepper column) and this harness has no replacement steppers.
@@ -1385,6 +1470,14 @@ K:Amin
         case 'BD_ERROR': {
           const msg = data.payload && data.payload.message;
           setStatus(`Module error: ${msg || '(no detail)'}`);
+          break;
+        }
+        // 2026-08-18 — general status relay from the module (errors-only text;
+        // non-error calls send empty and clear the readout).
+        case 'BD_STATUS': {
+          if (typeof data.text === 'string' && data.text.trim()) {
+            setStatus(data.text.trim());
+          }
           break;
         }
         default:
