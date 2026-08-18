@@ -43,7 +43,7 @@
          and top-aligned content leaves black space below. Bottom row (ext
          invite + Bake output) takes the slack (1fr). minmax(...,auto) lets a
          row grow if its content ever exceeds the floor. */
-      grid-template-rows: minmax(80px, auto) minmax(160px, auto) 1fr;
+      grid-template-rows: minmax(80px, auto) minmax(136px, auto) 1fr;   /* 2026-08-18 — player row -15% (160→136); the freed depth goes to the bottom row (ext invite + Bake output) which needed it */
       grid-template-areas:
         "copy   copy    arrows"
         "player player  steppers"

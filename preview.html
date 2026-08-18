@@ -231,11 +231,12 @@
     }
 
     /* Title line — now the FIRST line at the top of the panel (2026-08-18).
-       The ONE serif element (user: same font throughout except this). B&W. */
+       The ONE serif element (user: same font throughout except this).
+       Dark gold. */
     #bd-invite-target {
       margin: 0 0 2px 0;
       text-align: center;
-      color: #fff;
+      color: #d4a017;
       font-family: 'Georgia', 'Times New Roman', serif;
       font-size: 14px;
       font-weight: bold;
@@ -360,7 +361,7 @@
 
     #script-input {
       width: 100%;
-      min-height: 320px;            /* 2026-08-18 — +100% (was 160px) */
+      min-height: 368px;            /* 2026-08-18 — 160 → 320 (+100%) → 368 (+15%) */
       background: #0f0f18;
       color: #cfcfc4;                     /* slightly desaturated from #e8e8e0 —
                                              non-editable read cue (2026-07-15) */
@@ -545,7 +546,7 @@
   <div class="layout">
     <div class="module-column">
       <iframe id="module-frame"
-              src="music_module.html?v=2"
+              src="music_module.html?v=3"
               title="ButterflyDreaming Music Module"></iframe>
     </div>
 
@@ -1079,7 +1080,9 @@ K:Amin
     // Overlay `el` onto the module's grid cell `slotId`. Returns true if docked;
     // on any failure clears inline geometry so the element's CSS position
     // (its floating fallback) applies — nothing breaks.
-    function dockOnto(el, slotId) {
+    // growable=true → set min-height (not height) so the element fills the slot
+    // but can grow taller than it if its content needs the room (no clipping).
+    function dockOnto(el, slotId, growable) {
       try {
         const doc  = moduleFrame.contentDocument;
         const slot = doc && doc.getElementById(slotId);
@@ -1093,23 +1096,31 @@ K:Amin
             el.style.right  = 'auto';
             el.style.bottom = 'auto';
             el.style.width  = sr.width  + 'px';
-            el.style.height = sr.height + 'px';
+            if (growable) {
+              el.style.height    = 'auto';
+              el.style.minHeight = sr.height + 'px';
+            } else {
+              el.style.height    = sr.height + 'px';
+              el.style.minHeight = '';
+            }
             return true;
           }
         }
       } catch (e) { /* cross-doc access can throw pre-load — fall back */ }
       el.style.top = ''; el.style.left = ''; el.style.right = '';
       el.style.bottom = ''; el.style.width = ''; el.style.height = '';
+      el.style.minHeight = '';
       return false;
     }
 
     function positionSlots() {
-      // Collaborate invite docks into #bd-ext-slot in BOTH modes.
-      dockOnto(invitePanel, 'bd-ext-slot');
+      // Collaborate invite docks into #bd-ext-slot in BOTH modes; growable so
+      // its text is never clipped even if the slot is a touch short.
+      dockOnto(invitePanel, 'bd-ext-slot', true);
       // ↓↑ arrows dock into #bd-arrows-slot in EDIT mode only (CSS hides
       // #arrow-dock in basic mode; clear its geometry so it doesn't linger).
       if (!document.body.classList.contains('ev-basic')) {
-        dockOnto(arrowDock, 'bd-arrows-slot');
+        dockOnto(arrowDock, 'bd-arrows-slot', false);
       } else {
         arrowDock.style.top = ''; arrowDock.style.left = '';
         arrowDock.style.right = ''; arrowDock.style.width = '';
@@ -1410,7 +1421,7 @@ K:Amin
       switch (data.type) {
         case 'BD_READY': {
           moduleReady = true;
-          setStatus('Module ready.');
+          setStatus('');   // 2026-08-18 — no "Module ready." noise; status is errors-only
           // Grid is laid out now — dock the arrows. A couple of rAF ticks let
           // fonts/steppers settle so the slot rect is final.
           requestAnimationFrame(positionSlots);
