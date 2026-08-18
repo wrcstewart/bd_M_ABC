@@ -26,7 +26,9 @@
     body {
       background: #0a0a0f;
       color: #e8e8e0;
-      font-family: Georgia, 'Times New Roman', serif;
+      /* 2026-08-18 — one font throughout (user request); only #bd-invite-target
+         ("Butterfly Dreaming") keeps the serif. */
+      font-family: Arial, Helvetica, sans-serif;
       display: flex;
       flex-direction: column;
       padding-bottom: 36px;   /* reserve space for the fixed #bd-bar */
@@ -103,76 +105,60 @@
        sentence and two stacked call-to-action buttons (Jump In on top,
        Copy Link below). Right-aligned on landscape, spans further left on
        narrow / portrait so the text has room to breathe. */
+    /* 2026-08-18 — docked into the module's #bd-ext-slot by positionSlots();
+       these values are the fallback (floating bottom-right). B&W white frame. */
     #bd-invite-panel {
       position: fixed;
-      bottom: 34px;                  /* was 44 (36 px bar + 8 px gap);
-                                        dropped 10 px 2026-07-11 so panel top
-                                        clears the side-panel action row. */
+      bottom: 40px;
       right: 8px;
-      max-width: 208px;              /* -20 % from 260 px (2026-07-11);
-                                        panel shrunk after Copy Link removed */
-      padding: 10px 12px;
-      background: rgba(10, 10, 26, 0.95);
-      border: 1px solid #333;
-      border-radius: 6px;
+      width: 200px;
+      padding: 5px 6px;
+      background: #000;
+      border: 1px solid #fff;
+      border-radius: 4px;
       color: #ccc;
-      font-family: sans-serif;
-      font-size: 12px;
-      line-height: 1.35;
+      font-size: 11px;
+      line-height: 1.25;
       z-index: 1001;
-      display: none;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      overflow: hidden;
     }
 
-    body:not(.ev-basic) #bd-invite-panel { display: block; }
-
+    /* Detailed invite — sits at the BOTTOM of the panel (2026-08-18). */
     #bd-invite-text {
-      margin: 0 0 10px 0;
-      color: #ccc;
+      margin: 0;
+      color: #bbb;
       text-align: center;
+      font-size: 10px;
     }
 
     #bd-actions {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
     }
 
-    /* Jump to — solid muted amber. Darker/less saturated than the earlier
-       #FFD700 so it reads as invitation, not alarm. */
-    #bd-enter-btn {
-      background: #a07820;
-      color: #0a0a1a;
-      border: none;
-      border-radius: 3px;
-      padding: 6px 10px;
-      font-size: 12px;
-      cursor: pointer;
-      font-weight: bold;
-      font-family: sans-serif;
-    }
-
-    #bd-enter-btn:hover {
-      background: #c9a227;
-    }
-
-    /* Copy Link to — outlined muted amber, secondary. */
+    /* B&W buttons — white frame, black bg, white font (match the module). */
+    #bd-enter-btn,
     #bd-copy-link-btn {
-      background: transparent;
-      color: #a07820;
-      border: 1px solid #a07820;
+      background: #000;
+      color: #fff;
+      border: 1px solid #fff;
       border-radius: 3px;
-      padding: 5px 10px;             /* -1 px vertical to compensate for the border */
-      font-size: 12px;
+      padding: 4px 8px;
+      font-size: 11px;
       cursor: pointer;
       font-weight: bold;
-      font-family: sans-serif;
     }
 
+    #bd-enter-btn:hover,
     #bd-copy-link-btn:hover {
-      background: rgba(160, 120, 32, 0.15);
-      color: #c9a227;
-      border-color: #c9a227;
+      background: #1a1a1a;
+      color: #fff;
+      border-color: #fff;
     }
 
     /* Modal overlay — Copy Link update-script confirm (2026-07-15) */
@@ -188,8 +174,8 @@
     }
     .modal-overlay[hidden] { display: none; }
     .modal-box {
-      background: #1a1a20;
-      border: 1px solid #a07820;
+      background: #0a0a0a;
+      border: 1px solid #fff;
       border-radius: 6px;
       padding: 18px 20px;
       max-width: 380px;
@@ -201,7 +187,7 @@
       margin: 0 0 8px 0;
       font-size: 15px;
       font-weight: bold;
-      color: #ffd88a;
+      color: #fff;
     }
     .modal-body {
       margin: 0 0 14px 0;
@@ -216,9 +202,9 @@
       flex-wrap: wrap;
     }
     .modal-buttons button {
-      background: #3d2e00;
-      color: #ffd88a;
-      border: 1px solid #a07820;
+      background: #000;
+      color: #fff;
+      border: 1px solid #fff;
       border-radius: 3px;
       padding: 6px 12px;
       font-size: 13px;
@@ -226,9 +212,9 @@
       font-family: sans-serif;
     }
     .modal-buttons button:hover {
-      background: rgba(160, 120, 32, 0.2);
+      background: #1a1a1a;
       color: #fff;
-      border-color: #c9a227;
+      border-color: #fff;
     }
     .modal-check {
       display: flex;
@@ -241,16 +227,15 @@
     }
     .modal-check input {
       cursor: pointer;
-      accent-color: #a07820;
+      accent-color: #888;
     }
 
-    /* The target of both verb-buttons above — sits below them so the panel
-       reads as "Jump to Butterfly Dreaming" / "Copy Link to Butterfly
-       Dreaming". Italic + dark amber marks it as the shared object. */
+    /* Title line — now the FIRST line at the top of the panel (2026-08-18).
+       The ONE serif element (user: same font throughout except this). B&W. */
     #bd-invite-target {
-      margin: 8px 0 0 0;
+      margin: 0 0 2px 0;
       text-align: center;
-      color: #d4a017;
+      color: #fff;
       font-family: 'Georgia', 'Times New Roman', serif;
       font-size: 14px;
       font-weight: bold;
@@ -292,11 +277,12 @@
       cursor: not-allowed;
     }
 
-    /* Active-toggle state for Freeze and Edit — highlight when on. */
+    /* Active-toggle state for Edit — highlight when on. B&W (2026-08-18):
+       inverted fill so it's distinct by luminance, not hue. */
     #ev-actions button.active {
-      background: rgba(255, 215, 0, 0.15);
-      color: #FFD700;
-      border-color: #FFD700;
+      background: #e8e8e0;
+      color: #000;
+      border-color: #fff;
     }
 
     /* Basic mode (default on load): side panel hidden, canvas full width.
@@ -378,20 +364,20 @@
       background: #0f0f18;
       color: #cfcfc4;                     /* slightly desaturated from #e8e8e0 —
                                              non-editable read cue (2026-07-15) */
-      border: 1px solid #2a2a3a;
-      border-bottom: 5px solid #5a4020;   /* dark-amber demarcator strip (2026-07-02) */
+      border: 1px solid #555;
+      border-bottom: 5px solid #888;      /* B&W demarcator strip (2026-08-18) */
       border-radius: 3px;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: Arial, Helvetica, sans-serif;
       font-size: 16px;              /* ≥16 px avoids iOS auto-zoom on focus */
       line-height: 1.45;
       padding: 8px;
       resize: vertical;
       outline: none;
       flex: 0 0 auto;
-      margin-bottom: 7px;           /* small gap between amber bar and action row */
+      margin-bottom: 7px;           /* small gap between demarcator bar and steppers */
       cursor: default;              /* not text-cursor — signals non-typable */
     }
-    #script-input:focus { border-color: #4a9b8e; border-bottom-color: #5a4020; }
+    #script-input:focus { border-color: #aaa; border-bottom-color: #888; }
 
     /* Action row: Copy Link / Copy / ↓ / ↑ on one line; flex-wrap for narrow. */
     .action-bar {
@@ -406,7 +392,7 @@
       border: 1px solid #4a9b8e;
       color: #4a9b8e;
       cursor: pointer;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: Arial, Helvetica, sans-serif;
       font-size: 0.85rem;
       letter-spacing: 0.03em;
       padding: 6px 10px;
@@ -460,19 +446,8 @@
     .action-bar button:active { background: #243f3b; }
     .action-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* 2026-07-17 — the side-panel Copy Link is the primary sharing
-       action (produces the URL a user would paste into a message /
-       another device). Given filled amber to stand out from the
-       teal-outlined siblings (Copy / ↓ / ↑) and echo the invite-
-       panel's #bd-enter-btn palette. */
-    #copy-link-btn {
-      background: #a07820;
-      color: #0a0a1a;
-      border: 1px solid #a07820;
-      font-weight: bold;
-    }
-    #copy-link-btn:hover  { background: #c9a227; border-color: #c9a227; color: #0a0a1a; }
-    #copy-link-btn:active { background: #8a6618; border-color: #8a6618; }
+    /* 2026-08-18 — Copy Link now lives in the bottom bar next to Edit and
+       inherits the B&W #ev-actions button styling; no special palette. */
 
     #status {
       font-size: 0.75rem;
@@ -510,7 +485,7 @@
       letter-spacing: 0.02em;
       color: #4a9b8e;
       text-align: center;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: Arial, Helvetica, sans-serif;
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
@@ -527,7 +502,7 @@
       background: #0f0f18;
       border: 1px solid #4a9b8e;
       color: #4a9b8e;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: Arial, Helvetica, sans-serif;
       font-size: 1rem;
       padding: 0;
       width: 32px;
@@ -551,7 +526,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: Arial, Helvetica, sans-serif;
       font-size: 0.85rem;
       color: #e8e8e0;
       background: #0f0f18;
@@ -583,10 +558,8 @@
            content. Sliders continue to write to .value programmatically. -->
       <textarea id="script-input" spellcheck="false" readonly
                 title="Read-only — use the sliders below to modify the script"></textarea>
-      <div class="action-bar">
-        <button id="copy-link-btn" title="Copy a shareable URL that reproduces this script">Copy Link</button>
-        <button id="copy-btn"      title="Copy the script to the clipboard">Copy</button>
-      </div>
+      <!-- 2026-08-18 — Copy Link moved to the bottom bar (next to Edit, BD
+           style); Copy removed (the module's own Copy Script does that job). -->
       <div id="stepper-column" class="stepper-column"><!-- steppers injected --></div>
       <div id="status">Loading module…</div>
     </aside>
@@ -604,6 +577,7 @@
   <div id="bd-bar">
     <div id="ev-actions">
       <button id="ev-edit-btn"   type="button" title="Show or hide the script editor">Edit</button>
+      <button id="copy-link-btn" type="button" title="Copy a shareable URL that reproduces this script">Copy Link</button>
       <!-- ◀/▶ Prev/Next removed 2026-07-17: relied on BD's /api/module-sibling
            endpoint, not available in the standalone GitHub Pages deployment. -->
     </div>
@@ -620,18 +594,17 @@
     </div>
   </div>
 
-  <!-- Invitation panel: shown only when Edit is toggled on (body loses the
-       ev-basic class). Structure reads as a sentence — the two verb-buttons
-       above share the italic "Butterfly Dreaming" as their object. Also
-       resolves the naming conflict with the side-panel's Copy Link (which
-       copies the standalone-EV URL, not the BD-return URL). -->
+  <!-- Collaborate invite panel. 2026-08-18 — docked into the module's
+       #bd-ext-slot by positionSlots(); shown in both modes. Restructured:
+       "Butterfly Dreaming" title first (the one serif element), the two
+       action buttons, then the detailed invite at the bottom. -->
   <aside id="bd-invite-panel">
-    <p id="bd-invite-text">You can use our Platform to explore, collaborate and save</p>
+    <p id="bd-invite-target">Butterfly Dreaming</p>
     <div id="bd-actions">
       <button id="bd-enter-btn"     type="button" title="Return to ButterflyDreaming carrying the current script">Jump to</button>
       <button id="bd-copy-link-btn" type="button" title="Copy a BD-return link to the clipboard">Copy Link to</button>
     </div>
-    <p id="bd-invite-target">Butterfly Dreaming</p>
+    <p id="bd-invite-text">You can use our Platform to explore, collaborate and save</p>
   </aside>
 
   <!-- 2026-07-15 — Copy-Link confirm dialog. Sliders write to the script
@@ -662,7 +635,7 @@
     const textarea    = document.getElementById('script-input');
     const sendBtn     = document.getElementById('send-btn');
     const receiveBtn  = document.getElementById('receive-btn');
-    const copyBtn     = document.getElementById('copy-btn');
+    const copyBtn     = document.getElementById('copy-btn');   // removed 2026-08-18 (may be null)
     const copyLinkBtn = document.getElementById('copy-link-btn');
     const statusEl    = document.getElementById('status');
     const moduleFrame = document.getElementById('module-frame');
@@ -1100,33 +1073,46 @@ K:Amin
     // read the slot rect directly and add the iframe's page offset. If the slot
     // can't be read (module still loading, or an older build), the arrows fall
     // back to their CSS top-right position — nothing breaks. Edit-mode only.
-    const arrowDock = document.getElementById('arrow-dock');
-    function positionSlots() {
-      // Only meaningful while editing (arrow-dock is display:none otherwise).
-      if (document.body.classList.contains('ev-basic')) return;
-      let docked = false;
+    const arrowDock   = document.getElementById('arrow-dock');
+    const invitePanel = document.getElementById('bd-invite-panel');
+
+    // Overlay `el` onto the module's grid cell `slotId`. Returns true if docked;
+    // on any failure clears inline geometry so the element's CSS position
+    // (its floating fallback) applies — nothing breaks.
+    function dockOnto(el, slotId) {
       try {
         const doc  = moduleFrame.contentDocument;
-        const slot = doc && doc.getElementById('bd-arrows-slot');
+        const slot = doc && doc.getElementById(slotId);
         if (slot) {
           const fr = moduleFrame.getBoundingClientRect();
           const sr = slot.getBoundingClientRect();
           if (sr.width >= 8 && sr.height >= 8) {
-            arrowDock.style.top    = (fr.top  + sr.top)  + 'px';
-            arrowDock.style.left   = (fr.left + sr.left) + 'px';
-            arrowDock.style.right  = 'auto';
-            arrowDock.style.width  = sr.width  + 'px';
-            arrowDock.style.height = sr.height + 'px';
-            docked = true;
+            el.style.position = 'fixed';
+            el.style.top    = (fr.top  + sr.top)  + 'px';
+            el.style.left   = (fr.left + sr.left) + 'px';
+            el.style.right  = 'auto';
+            el.style.bottom = 'auto';
+            el.style.width  = sr.width  + 'px';
+            el.style.height = sr.height + 'px';
+            return true;
           }
         }
       } catch (e) { /* cross-doc access can throw pre-load — fall back */ }
-      if (!docked) {
-        // Fallback: clear inline geometry so the CSS top:52px right:8px applies.
-        arrowDock.style.top = '';
-        arrowDock.style.left = '';
-        arrowDock.style.right = '';
-        arrowDock.style.width = '';
+      el.style.top = ''; el.style.left = ''; el.style.right = '';
+      el.style.bottom = ''; el.style.width = ''; el.style.height = '';
+      return false;
+    }
+
+    function positionSlots() {
+      // Collaborate invite docks into #bd-ext-slot in BOTH modes.
+      dockOnto(invitePanel, 'bd-ext-slot');
+      // ↓↑ arrows dock into #bd-arrows-slot in EDIT mode only (CSS hides
+      // #arrow-dock in basic mode; clear its geometry so it doesn't linger).
+      if (!document.body.classList.contains('ev-basic')) {
+        dockOnto(arrowDock, 'bd-arrows-slot');
+      } else {
+        arrowDock.style.top = ''; arrowDock.style.left = '';
+        arrowDock.style.right = ''; arrowDock.style.width = '';
         arrowDock.style.height = '';
       }
     }
@@ -1381,7 +1367,8 @@ K:Amin
       };
     }
 
-    copyBtn.addEventListener('click', () => {
+    // Copy button removed 2026-08-18 (the module's Copy Script covers it).
+    if (copyBtn) copyBtn.addEventListener('click', () => {
       copyTextSmart(textarea.value).then((method) => {
         console.log(`Copy: copied via ${method}`);
         const original = copyBtn.textContent;
