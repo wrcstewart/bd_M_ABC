@@ -286,10 +286,9 @@
       border-color: #fff;
     }
 
-    /* Basic mode (default on load): side panel hidden, canvas full width.
-       Edit button toggles body.ev-editing to reveal the panel. Side panel
-       stays laid out via existing flex; no width tweaks needed. */
-    body.ev-basic .side-panel { display: none; }
+    /* 2026-08-19 — the simplified non-edit ("basic") mode is RETIRED, matching
+       bd_M_Fractal. The side panel is always present, so there is no
+       body.ev-basic rule and no Edit toggle. */
 
     .layout {
       flex: 1;
@@ -419,12 +418,12 @@
       position: fixed;
       top: 52px;
       right: 8px;
-      display: none;                     /* shown in edit mode (rule below) */
+      display: flex;                     /* 2026-08-19 — always shown; the basic
+                                            mode that hid it is retired */
       flex-direction: row;
       gap: 4px;
       z-index: 1001;
     }
-    body:not(.ev-basic) #arrow-dock { display: flex; }
     #arrow-dock button {
       flex: 1 1 0;
       min-width: 40px;
@@ -541,7 +540,7 @@
     }
   </style>
 </head>
-<body class="ev-basic">
+<body>
 
   <div class="layout">
     <div class="module-column">
@@ -577,10 +576,10 @@
 
   <div id="bd-bar">
     <div id="ev-actions">
-      <button id="ev-edit-btn"   type="button" title="Show or hide the script editor">Edit</button>
-      <button id="copy-link-btn" type="button" title="Copy a shareable URL that reproduces this script">Copy Link</button>
-      <!-- ◀/▶ Prev/Next removed 2026-07-17: relied on BD's /api/module-sibling
+      <!-- Edit button removed 2026-08-19 with the basic mode it toggled.
+           ◀/▶ Prev/Next removed 2026-07-17: relied on BD's /api/module-sibling
            endpoint, not available in the standalone GitHub Pages deployment. -->
+      <button id="copy-link-btn" type="button" title="Copy a shareable URL that reproduces this script">Copy Link</button>
     </div>
     <span id="bd-source-context"></span>
     <!-- 2026-07-18 — inline audio player, right end of #bd-bar. Hardcoded
@@ -1054,19 +1053,10 @@ K:Amin
     // Freeze button dropped for the music module — no drift/animation to
     // freeze. ◀ Prev / Next ▶ retired earlier (needed BD's
     // /api/module-sibling endpoint, not present on GitHub Pages).
-    const evEditBtn = document.getElementById('ev-edit-btn');
-
-    // Edit — toggle the side panel (script textarea) via a body class.
-    // Basic mode = ev-basic present = side panel hidden.
-    if (evEditBtn) {
-      evEditBtn.addEventListener('click', () => {
-        const nowEditing = document.body.classList.toggle('ev-basic') === false;
-        evEditBtn.classList.toggle('active', nowEditing);
-        // Grid reflows between full-width (basic) and side-panel-inset (edit),
-        // so the slot moves — re-dock. rAF lets layout settle first.
-        requestAnimationFrame(positionSlots);
-      });
-    }
+    // Edit button + basic mode retired 2026-08-19 — this harness is edit-only,
+    // so the side panel is always present and there is nothing to toggle. The
+    // grid no longer reflows between two widths either, so the re-dock that
+    // followed the toggle is gone with it.
 
     // ── Dock the ↓↑ arrows onto the module's grid slot ─────────────────────
     // The music module reserves an empty #bd-arrows-slot cell (top-right of its
@@ -1114,18 +1104,12 @@ K:Amin
     }
 
     function positionSlots() {
-      // Collaborate invite docks into #bd-ext-slot in BOTH modes; growable so
-      // its text is never clipped even if the slot is a touch short.
+      // Collaborate invite docks into #bd-ext-slot; growable so its text is
+      // never clipped even if the slot is a touch short.
       dockOnto(invitePanel, 'bd-ext-slot', true);
-      // ↓↑ arrows dock into #bd-arrows-slot in EDIT mode only (CSS hides
-      // #arrow-dock in basic mode; clear its geometry so it doesn't linger).
-      if (!document.body.classList.contains('ev-basic')) {
-        dockOnto(arrowDock, 'bd-arrows-slot', false);
-      } else {
-        arrowDock.style.top = ''; arrowDock.style.left = '';
-        arrowDock.style.right = ''; arrowDock.style.width = '';
-        arrowDock.style.height = '';
-      }
+      // ↓↑ arrows dock into #bd-arrows-slot. 2026-08-19 — unconditional now
+      // that basic mode is gone; there is no state in which they are hidden.
+      dockOnto(arrowDock, 'bd-arrows-slot', false);
     }
     window.addEventListener('resize', positionSlots);
 
