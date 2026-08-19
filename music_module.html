@@ -112,17 +112,22 @@
     .panel button:hover:not(:disabled)  { background: #1a1a1a; }
     .panel button:disabled              { opacity: 0.4; cursor: not-allowed; }
 
-    /* Play/Stop exception: 2× size. B&W (2026-08-18) — distinguished by
-       LUMINANCE not hue (see user-colour-vision): Play = light fill / dark
-       label, Stop = dark fill / light label. */
+    /* Play/Stop exception: 2× size. 2026-08-19 — back to the BD-embedded
+       light-green / light-red pair (was B&W light/dark since 2026-08-18).
+       Both fills are LIGHT and carry the same dark #10240f label, so the pair
+       still reads by luminance against the black panel even if the hues don't
+       separate (see user-colour-vision); the hue is the extra cue, not the
+       only one. Keep these three values identical to M_Music/music_module.html
+       in the BD repo. */
     .big-btn {
       min-width: 108px;
       min-height: 56px;                  /* standard 2× button; panel depth adds the black space */
       font-size: 0.95rem;
       font-weight: bold;
+      color: #10240f !important;
     }
-    .big-btn.play { background: #f0f0f0 !important; color: #000 !important; }
-    .big-btn.stop { background: #000 !important;    color: #fff !important; }
+    .big-btn.play { background: #9be29b !important; }
+    .big-btn.stop { background: #e59b9b !important; }
     .big-btn:hover:not(:disabled) { filter: brightness(1.08); }
 
     /* LH column — 3 action buttons (Copy Script, Deep Link, Create mp3).
@@ -329,7 +334,7 @@
     <!-- top-left: Copy panel (expand later if needed, shrinking the Play/Stop panel) -->
     <div class="panel copy-panel">
       <button id="copy-script-btn" type="button" title="Copy the current ABC script (with %%bd_ directives) to the clipboard">Copy Script</button>
-      <button id="copy-abc-btn"    type="button" title="Copy the plain .abc score (placeholder)" disabled>Copy .abc</button>
+      <button id="copy-abc-btn"    type="button" title="Copy just the .abc score — no %%bd_ directives — ready to paste into any ABC editor" disabled>Copy .abc</button>
     </div>
 
     <!-- centre: player main controls -->
@@ -384,6 +389,7 @@
     const playPauseBtn   = document.getElementById('play-pause-btn');
     const stopBtn        = document.getElementById('stop-btn');
     const copyScriptBtn  = document.getElementById('copy-script-btn');
+    const copyAbcBtn     = document.getElementById('copy-abc-btn');
     const bakeMp3Btn     = document.getElementById('bake-mp3-btn');
     const downloadBtn    = document.getElementById('download-mp3-btn');   // standalone: Save wav
     const saveMidiBtn    = document.getElementById('save-midi-btn');      // standalone: Save midi
@@ -721,6 +727,7 @@
       stopBtn.disabled         = !ready;
       playPauseBtn.textContent = (playerState === 'playing') ? 'Pause' : 'Play';
       copyScriptBtn.disabled   = !storedText;
+      copyAbcBtn.disabled      = !storedText;
       bakeMp3Btn.disabled      = !ready || baking;
       downloadBtn.disabled     = !lastBakedBlob;                  // standalone: Save wav
       saveMidiBtn.disabled     = !storedText;                     // standalone: Save midi (from score)
@@ -754,21 +761,43 @@
       setTimeout(() => { btn.classList.remove('flash'); btn.innerHTML = orig; }, 1200);
     }
 
-    copyScriptBtn.addEventListener('click', async () => {
-      const text = currentScriptWithParams();
+    // Shared by Copy Script and Copy .abc: async clipboard first, hidden
+    // <textarea> + execCommand as the fallback (Safari/iOS refuse the async
+    // API outside a trusted gesture in some contexts). Flashes the button on
+    // success, reports on the status line on failure.
+    async function copyViaClipboard(text, btn) {
+      if (!text) { setStatus('Nothing to copy', true); return; }
       try {
         await navigator.clipboard.writeText(text);
-        flashBtn(copyScriptBtn, 'Copied<br>✓');
-      } catch (_) {
-        const ta = document.createElement('textarea');
-        ta.value = text; ta.setAttribute('readonly', '');
-        Object.assign(ta.style, { position:'fixed', left:'-9999px', opacity:'0' });
-        document.body.appendChild(ta);
-        ta.focus(); ta.select();
-        try { document.execCommand('copy'); flashBtn(copyScriptBtn, 'Copied<br>✓'); }
-        catch (_) { setStatus('Copy failed', true); }
-        document.body.removeChild(ta);
-      }
+        flashBtn(btn, 'Copied<br>\u2713');
+        return;
+      } catch (_) { /* fall through to the legacy path */ }
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', '');
+      Object.assign(ta.style, { position:'fixed', left:'-9999px', opacity:'0' });
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      try { document.execCommand('copy'); flashBtn(btn, 'Copied<br>\u2713'); }
+      catch (_) { setStatus('Copy failed', true); }
+      document.body.removeChild(ta);
+    }
+
+    copyScriptBtn.addEventListener('click', () => {
+      copyViaClipboard(currentScriptWithParams(), copyScriptBtn);
+    });
+
+    // Copy .abc — the plain score only: strip the %%bd_score wrapper and every
+    // %%bd_ directive line, so what lands on the clipboard is valid ABC that
+    // any external editor (abcjs, EasyABC, abcnotation.com) will open. Same
+    // source of truth as Save midi, which also renders from extractScore().
+    copyAbcBtn.addEventListener('click', () => {
+      const abcText = extractScore(storedText || '')
+        .split('\n')
+        .filter(line => !/^%%bd_/.test(line.trim()))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      copyViaClipboard(abcText ? abcText + '\n' : '', copyAbcBtn);
     });
 
     // Snapshot the button's initial HTML ONCE at load. Reused as the restore
