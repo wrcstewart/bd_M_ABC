@@ -127,13 +127,9 @@
       overflow: hidden;
     }
 
-    /* Detailed invite — sits at the BOTTOM of the panel (2026-08-18). */
-    #bd-invite-text {
-      margin: 0;
-      color: #bbb;
-      text-align: center;
-      font-size: 10px;
-    }
+    /* #bd-invite-text (the "You can use our Platform…" strapline) removed
+       2026-08-20 — it was the only thing making the panel taller than its grid
+       cell, so it hung over the bottom bar and covered the piece-name line. */
 
     #bd-actions {
       display: flex;
@@ -545,7 +541,7 @@
   <div class="layout">
     <div class="module-column">
       <iframe id="module-frame"
-              src="music_module.html?v=5"
+              src="music_module.html?v=6"
               title="ButterflyDreaming Music Module"></iframe>
     </div>
 
@@ -604,7 +600,6 @@
       <button id="bd-enter-btn"     type="button" title="Return to ButterflyDreaming carrying the current script">Jump to</button>
       <button id="bd-copy-link-btn" type="button" title="Copy a BD-return link to the clipboard">Copy Link to</button>
     </div>
-    <p id="bd-invite-text">You can use our Platform to explore, collaborate and save</p>
   </aside>
 
   <!-- 2026-07-15 — Copy-Link confirm dialog. Sliders write to the script
@@ -1106,7 +1101,10 @@ K:Amin
     function positionSlots() {
       // Collaborate invite docks into #bd-ext-slot; growable so its text is
       // never clipped even if the slot is a touch short.
-      dockOnto(invitePanel, 'bd-ext-slot', true);
+      // growable:false since 2026-08-20 — with the strapline gone the title +
+      // two buttons fit the cell, and pinning the height makes the panel's
+      // bottom edge align with the output panel's (they share a grid row).
+      dockOnto(invitePanel, 'bd-ext-slot', false);
       // ↓↑ arrows dock into #bd-arrows-slot. 2026-08-19 — unconditional now
       // that basic mode is gone; there is no state in which they are hidden.
       dockOnto(arrowDock, 'bd-arrows-slot', false);
