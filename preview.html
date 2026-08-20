@@ -364,8 +364,14 @@
       border-bottom: 5px solid #888;      /* B&W demarcator strip (2026-08-18) */
       border-radius: 3px;
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 16px;              /* ≥16 px avoids iOS auto-zoom on focus */
-      line-height: 1.45;
+      /* 2026-08-20 — 16 → 13px (-20%) so more of the score is visible and it is
+         obvious the text continues past the header. The usual "≥16px or iOS
+         auto-zooms on focus" rule is why it was 16: that zoom fires on FOCUS,
+         so this field is made unfocusable below rather than left at 16. It is
+         readonly — the sliders and Copy Script are how you interact with it —
+         so nothing is lost by taking it out of the focus order. */
+      font-size: 13px;
+      line-height: 1.35;            /* tightened with the font, ~2 more lines */
       padding: 8px;
       resize: vertical;
       outline: none;
@@ -374,6 +380,9 @@
       cursor: default;              /* not text-cursor — signals non-typable */
     }
     #script-input:focus { border-color: #aaa; border-bottom-color: #888; }
+    /* Belt and braces for the sub-16px font: no caret, and out of the tab
+       order. Text is still selectable for a manual copy. */
+    #script-input { caret-color: transparent; }
 
     /* Action row: Copy Link / Copy / ↓ / ↑ on one line; flex-wrap for narrow. */
     .action-bar {
@@ -552,7 +561,7 @@
            payload that Copy-Link-back-to-BD carries, and BD's receiver would
            have no way to distinguish typed content from slider-derived
            content. Sliders continue to write to .value programmatically. -->
-      <textarea id="script-input" spellcheck="false" readonly
+      <textarea id="script-input" spellcheck="false" readonly tabindex="-1"
                 title="Read-only — use the sliders below to modify the script"></textarea>
       <!-- 2026-08-18 — Copy Link moved to the bottom bar (next to Edit, BD
            style); Copy removed (the module's own Copy Script does that job). -->
@@ -625,6 +634,18 @@
 
   <script>
     'use strict';
+
+    // 2026-08-20 — the script panel runs at 13px, below iOS's 16px auto-zoom
+    // threshold. tabindex="-1" keeps it out of the tab order but does NOT stop
+    // a TAP from focusing it, and focus is what triggers the zoom — so bounce
+    // the focus straight back off. The field is readonly, so nothing is lost;
+    // selection for a manual copy still works because that does not need focus
+    // to persist. If a zoom ever slips through, the fix is to put font-size
+    // back to 16px and win the extra lines by growing the panel instead.
+    document.addEventListener('DOMContentLoaded', () => {
+      const si = document.getElementById('script-input');
+      if (si) si.addEventListener('focus', () => si.blur());
+    });
 
     // ── Element refs ──────────────────────────────────────────────────────────
     const textarea    = document.getElementById('script-input');
