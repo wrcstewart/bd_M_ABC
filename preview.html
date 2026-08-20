@@ -358,18 +358,17 @@
       width: 100%;
       min-height: 368px;            /* 2026-08-18 — 160 → 320 (+100%) → 368 (+15%) */
       background: #0f0f18;
-      color: #cfcfc4;                     /* slightly desaturated from #e8e8e0 —
-                                             non-editable read cue (2026-07-15) */
+      color: #e8e8e0;                     /* 2026-08-20 — editable again, so the
+                                             desaturated read-only cue is wrong */
       border: 1px solid #555;
       border-bottom: 5px solid #888;      /* B&W demarcator strip (2026-08-18) */
       border-radius: 3px;
       font-family: Arial, Helvetica, sans-serif;
-      /* 2026-08-20 — 16 → 13px (-20%) so more of the score is visible and it is
-         obvious the text continues past the header. The usual "≥16px or iOS
-         auto-zooms on focus" rule is why it was 16: that zoom fires on FOCUS,
-         so this field is made unfocusable below rather than left at 16. It is
-         readonly — the sliders and Copy Script are how you interact with it —
-         so nothing is lost by taking it out of the focus order. */
+      /* 2026-08-20 — 13px to READ (was 16): ~20 lines instead of ~15, so the
+         score is visibly longer than its six-line header. iOS auto-zooms the
+         page when a field under 16px takes focus, but it decides that from the
+         computed size AT FOCUS — so the :focus rule below goes back to 16px and
+         the zoom never fires. Dense to read, comfortable to type in. */
       font-size: 13px;
       line-height: 1.35;            /* tightened with the font, ~2 more lines */
       padding: 8px;
@@ -377,12 +376,15 @@
       outline: none;
       flex: 0 0 auto;
       margin-bottom: 7px;           /* small gap between demarcator bar and steppers */
-      cursor: default;              /* not text-cursor — signals non-typable */
+      cursor: text;
     }
-    #script-input:focus { border-color: #aaa; border-bottom-color: #888; }
-    /* Belt and braces for the sub-16px font: no caret, and out of the tab
-       order. Text is still selectable for a manual copy. */
-    #script-input { caret-color: transparent; }
+    #script-input:focus {
+      border-color: #aaa;
+      border-bottom-color: #888;
+      /* The anti-zoom half of the 13px rule above — see the comment there. */
+      font-size: 16px;
+      line-height: 1.45;
+    }
 
     /* Action row: Copy Link / Copy / ↓ / ↑ on one line; flex-wrap for narrow. */
     .action-bar {
@@ -555,14 +557,17 @@
     </div>
 
     <aside class="side-panel">
-      <!-- 2026-07-15 (Op 2, content-moderation) — readonly. The script must
-           only be modified via the sliders below (structured, template-bounded
-           edits). Keyboard typing would introduce arbitrary text into the
-           payload that Copy-Link-back-to-BD carries, and BD's receiver would
-           have no way to distinguish typed content from slider-derived
-           content. Sliders continue to write to .value programmatically. -->
-      <textarea id="script-input" spellcheck="false" readonly tabindex="-1"
-                title="Read-only — use the sliders below to modify the script"></textarea>
+      <!-- Editable since 2026-08-20. It was made readonly on 2026-07-15
+           (Op 2, content-moderation) so the Copy-Link-back-to-BD payload could
+           only carry slider-derived text. That reasoning is superseded: the
+           consent boundary is the BD graph write, not the export path, and a
+           user who wants to experiment with the score should be able to. BD's
+           receiver still gates what it accepts. bd_M_Fractal has been editable
+           throughout for the same reason. Sliders keep writing to .value
+           programmatically; typing additionally fires the input listener that
+           syncs the steppers back. -->
+      <textarea id="script-input" spellcheck="false"
+                title="Edit the ABC script directly, or drive it from the module's steppers"></textarea>
       <!-- 2026-08-18 — Copy Link moved to the bottom bar (next to Edit, BD
            style); Copy removed (the module's own Copy Script does that job). -->
       <div id="stepper-column" class="stepper-column"><!-- steppers injected --></div>
@@ -634,18 +639,6 @@
 
   <script>
     'use strict';
-
-    // 2026-08-20 — the script panel runs at 13px, below iOS's 16px auto-zoom
-    // threshold. tabindex="-1" keeps it out of the tab order but does NOT stop
-    // a TAP from focusing it, and focus is what triggers the zoom — so bounce
-    // the focus straight back off. The field is readonly, so nothing is lost;
-    // selection for a manual copy still works because that does not need focus
-    // to persist. If a zoom ever slips through, the fix is to put font-size
-    // back to 16px and win the extra lines by growing the panel instead.
-    document.addEventListener('DOMContentLoaded', () => {
-      const si = document.getElementById('script-input');
-      if (si) si.addEventListener('focus', () => si.blur());
-    });
 
     // ── Element refs ──────────────────────────────────────────────────────────
     const textarea    = document.getElementById('script-input');
@@ -1013,12 +1006,11 @@ K:Amin
       });
     })();
 
-    // Defensive: keep the input → stepper sync wired up even though the
-    // textarea is readOnly (2026-07-15 Op 2). Programmatic .value = assigns
-    // (what sliders do) don't fire 'input', so this listener only fires if
-    // the readonly attribute is later removed for testing / dev override.
-    // Under normal user operation, sliders write to .value directly and
-    // update their own displays separately — this listener stays idle.
+    // Keep the steppers in step with typing. Programmatic .value = assigns
+    // (what the sliders do) don't fire 'input', so this only runs for real
+    // keystrokes — which, since 2026-08-20, is a normal thing to do here
+    // rather than a dev override. Pressing ↓ is still what sends the edited
+    // script to the module.
     textarea.addEventListener('input', () => syncSteppersFromScript(textarea.value));
 
     // ── #bd-bar (bottom): source context + Enter ButterflyDreaming ──────────
