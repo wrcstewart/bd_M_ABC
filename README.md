@@ -1,5 +1,48 @@
 # bd_M_ABC — music module for ButterflyDreaming
 
+> ## RETIRED — still works, no longer the way in
+>
+> This standalone harness is **frozen**: kept because it runs, not maintained.
+> It is the ABC music player, and it still does that. What has changed is everything around it.
+>
+> ### Why
+>
+> **Sharing by link stopped scaling.** The whole state travelled in the URL, and
+> a URL has a ceiling: plain text scanned by Apple's data detector is cut at
+> **659 characters**, and a real link had reached ~650. Adding one field took it
+> over, silently — the link arrived truncated, the payload was dropped, and the
+> page loaded its default script looking perfectly healthy. Anything with
+> content rather than just parameters — a score, a long rule set — was past the
+> limit before it began. Email and the address bar were never affected, but a
+> thing you cannot send in a message is not really shareable.
+>
+> **And the module stopped needing to be its own controller.**
+> ButterflyDreaming drives it now: BD holds the script, the script is the thing
+> that is true, and the module renders what it is given. Sharing moved off the
+> URL and onto a socket, where size is not the question.
+>
+> ### Where to go instead
+>
+> - **ButterflyDreaming** — the full system: a corpus of literature, art and
+>   music that anonymous users collage together in conversation, with this
+>   module as one of its media modules.
+> - **BDX · AVX · RX — <https://github.com/wrcstewart/bdx-demo>** — the test
+>   harness, and the place to start if you want to build on this. A
+>   **controller** (the script and the controls), a **viewer** (the same
+>   a score live on another device), and a **relay** — with no database, no corpus
+>   and no accounts. It is what this standalone was trying to be, done properly:
+>   the controls are outside the module, the module simply accepts a script and
+>   announces what it made, and the two conventions that requires are all you
+>   need to write your own.
+>
+> ### One concrete caveat
+>
+> Newer scripts may mark a directive `%bd_p_<name>` to say it carries a user
+> control. **This harness does not know that mark** and will read
+> `%bd_p_symmetry` as a directive it has never heard of — so a recent script
+> opened here loses those parameters and renders at defaults, with nothing to
+> say why. Scripts written before 2026-09-23 are unaffected.
+
 Standalone deployment of the **bd_M_ABC** music module — plays an
 [ABC-notation](https://abcnotation.com/) score through a
 bass-recorder sampler with reverb, vibrato, and chorus effects,
